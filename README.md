@@ -2,70 +2,54 @@
 
 [简体中文](README.zh-CN.md) · English
 
-Detects games and switches OBS capture sources, with desktop capture and automatic replay buffer management.
+I switch between games a lot and got tired of picking a new capture window in OBS every time. This script follows the game I'm playing. It can also handle desktop capture and the replay buffer if I want it to.
 
-[Download script](https://github.com/CHUXIN2233/OBS-GameFlow/releases/latest/download/OBS_Game_Follow.lua) · [Releases](https://github.com/CHUXIN2233/OBS-GameFlow/releases)
+[Download](https://github.com/CHUXIN2233/OBS-GameFlow/releases/latest/download/OBS_Game_Follow.lua) · [Releases](https://github.com/CHUXIN2233/OBS-GameFlow/releases)
 
 ## Install
 
-1. Download `OBS_Game_Follow.lua` and keep it in a permanent folder.
-2. In OBS, open **Tools → Scripts** and add that file.
-3. Check the capture source, then enable **Auto-switch games**, **Automatic replay** and **Record desktop** as needed. All three start off when the script is first added.
+1. Download `OBS_Game_Follow.lua` and keep it somewhere permanent.
+2. In OBS, go to **Tools → Scripts** and add the file.
+3. Pick your Game Capture source if needed, then turn on the switches you want.
 
-The game library is built in. No SRM installation, database download or database path setup is required. The Lua file is the only runtime file; no ASS, Python, WebSocket connection or background helper is needed.
+All three main switches are off by default. If there's only one existing Game Capture source, GameFlow picks it automatically. Otherwise, select one under **Advanced → Capture sources**. It won't create scenes or sources for you.
 
-On first use, OGF selects the sole existing native Game Capture source. Create one in your recording scene if none exists, or select one under **Advanced → Capture sources** if there are several. Scenes and sources are not created automatically.
-
-To upgrade, keep the filename and location, replace the script and reload its existing OBS entry. Your settings are retained. Keep only one automatic switching script loaded.
+The game list is built in. The Lua file is enough to run GameFlow; no other plugin or background app is required.
 
 ## Settings
 
-- **Auto-switch games** follows the game you're using. Alt+Tab keeps the game selected; closing it falls back to another running game.
-- **Automatic replay** manages the replay buffer. It is off by default. With it off, capture switching continues while you control the buffer manually. Turning it off leaves a running buffer running.
-- **Record desktop** captures the desktop when no game is running. Games take priority. Automatic replay controls automatic buffer start and stop.
-- **Current capture / Replay buffer** show the selected target and the actual On / Off state. Select **Refresh** to update them.
+- **Auto-switch games:** follows the game you're using. Alt+Tab keeps the game selected; when it closes, another running game can take over.
+- **Automatic replay:** starts and stops the replay buffer based on the settings below. When off, OBS's manual replay controls still work. Disabling it doesn't stop a buffer that's already running.
+- **Record desktop:** uses Display Capture only when no game is running. If a game is still open, it stays on the game.
 
-With Automatic replay enabled:
+With **Automatic replay** on:
 
-| Record desktop | Buffer behavior |
-| --- | --- |
-| Off | Starts when a game is detected; stops about five seconds after all games exit. |
-| On | Starts once OBS is ready and desktop capture is configured; captures games first, then returns to the desktop. |
+- **Record desktop off:** replay starts when a game is found and stops about 5 seconds after the last game exits.
+- **Record desktop on:** replay stays on while OBS is ready and desktop capture is set up. Games still take priority.
 
-Switching games and Alt+Tab do not restart the buffer. Enable Replay Buffer under **Settings → Output** in OBS and assign a Save Replay hotkey. Stopping the buffer discards unsaved footage.
+Switching games or using Alt+Tab won't restart the replay buffer. To save clips, enable **Replay Buffer** in **OBS Settings → Output** and set a save hotkey. Stopping the buffer loses anything you haven't saved.
 
-For desktop recording, add a Display Capture source to the current scene below the game and client sources. A single available source can be selected automatically; choose one manually if there are several.
+## A few things to set up
 
-## Library and rules
+- **Desktop:** add a Display Capture source to the same scene, below the game/client capture sources. If you have more than one, choose it under **Advanced → Capture sources**.
+- **League of Legends:** add a Window Capture source above Game Capture. Choose it under **Advanced → Clients** and enable client capture. The client and the match are handled separately.
+- **Unrecognized game:** add a rule under **Advanced → Library and rules → Custom game rules**. One per line, for example:
 
-The built-in library contains 11,054 distinct display names, 13,023 matching rules and 348 exclusions. Names can include aliases, so this is not a count of distinct games. Data is updated with script releases; the running script does not download it.
+  ```text
+  mygame.exe=My Game
+  ```
 
-Add one entry per line under **Advanced → Library and rules → Custom game rules**:
+GameFlow has a built-in game list and exclusions, so you usually won't need custom rules or external data paths. The UI follows OBS's language, or you can choose Chinese or English. Advanced settings and diagnostics are collapsed by default.
 
-```text
-mygame.exe=My game
-```
+Windows only. A game being recognized doesn't guarantee OBS can hook it; minimized games may stop rendering. When updating, replace the Lua file at the same path so your existing settings are kept.
 
-Custom rules take priority. Path matching, ambiguity checks, exclusions and League handling are retained.
+## Optional tools and thanks
 
-External Discord JSON and compatible SRM Lua paths are optional. Most users can leave them empty. Valid configured paths load as before; missing or unreadable optional imports use the built-in library. Existing setting keys remain compatible.
+- [Smart Replay Mover](https://github.com/SlonickLab/Smart-Replay-Mover) — sorts saved clips into game folders and handles filenames. It's optional. If GameFlow is managing the buffer, disable its auto-start and restart-after-save options so they don't fight over the buffer.
+- [OBS Notifier](https://github.com/DmitriySalnikov/OBSNotifier) — shows desktop notifications for OBS events, including replay saves. Also optional.
 
-## League of Legends and SRM
+The built-in matching data uses Discord game detection metadata and game mappings/exclusions from Smart Replay Mover. Those records aren't claimed as original GameFlow data. Copyright and source details are in [Third-party notices](THIRD_PARTY_NOTICES.md).
 
-For the League client, add a Window Capture source directly to the game scene above Game Capture. Under **Advanced → Clients**, select its scene and source, then enable Capture clients. The default rule is `LeagueClientUx.exe=英雄联盟客户端`; the label can be changed to `League client`. Matches and other recognized games take priority, with fallback to the client when a match exits.
+## License
 
-SRM remains optional for saving, naming and organizing replays. If OGF manages the buffer, disable SRM's automatic buffer start and restart-after-save options.
-
-## Language and diagnostics
-
-The UI follows OBS by default, with manual Simplified Chinese and English options. Source names, paths and custom rules stay as configured. Advanced and Diagnostics start collapsed.
-
-To investigate detection, select **Check window in 3 seconds**, switch to your game, then refresh the results. The check reads window information without changing the capture target. Normal startup waits no longer open Script Log; configuration errors still produce warnings.
-
-Windows native Game Capture, Window Capture and Display Capture are supported. Recognition does not guarantee that OBS can capture every game. Minimized games may stop rendering.
-
-## License and acknowledgements
-
-From v1.1.0, this program and the SRM-derived portions use [GPL-3.0-or-later](LICENSE). The original GameFlow [MIT notice](LICENSE-MIT.txt) is retained. Earlier MIT releases are unchanged.
-
-The built-in records are compiled from Discord detection metadata and [Smart Replay Mover](https://github.com/SlonickLab/Smart-Replay-Mover) game mappings and exclusions. They are not claimed as original project data. Third-party data retain their rights and applicable terms; the project license grants no additional data rights. See [source and copyright notices](THIRD_PARTY_NOTICES.md).
+From v1.1.0, this bundled edition is licensed under [GPL-3.0-or-later](LICENSE), with the original GameFlow [MIT notice](LICENSE-MIT.txt) retained. Earlier MIT releases keep their original license. The project license doesn't change third-party data rights.

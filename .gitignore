@@ -1,0 +1,8 @@
+discord_games.json
+*.download
+*.log
+*.bak
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

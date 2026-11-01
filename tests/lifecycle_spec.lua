@@ -406,6 +406,26 @@ test('real capture configuration errors still produce warnings',function()
     assert(warned,'configuration failure must remain a warning')
 end)
 
+test('first import selects the sole existing Game Capture and saves its name',function()
+    reset({source_name=''})
+    eq(settings.source_name,'Capture'); eq(starts,0); eq(stops,0)
+    eq(settings.discord_file,'work/nonexistent/discord.json')
+end)
+
+test('first import does not guess between multiple Game Capture sources',function()
+    reset(); settings.source_name=''
+    sources.Second={name='Second',kind='game_capture',settings={},windows={}}
+    script_update(settings)
+    eq(settings.source_name,''); eq(starts,0); eq(stops,0)
+end)
+
+test('existing explicit Game Capture selection is retained with multiple sources',function()
+    reset()
+    sources.Second={name='Second',kind='game_capture',settings={},windows={}}
+    script_update(settings)
+    eq(settings.source_name,'Capture'); eq(starts,0); eq(stops,0)
+end)
+
 print(string.format("RESULT %d tests passed; frontend simulation + real Windows LuaJIT/FFI",total))
 
 -- UI-only model: nested lookup deliberately does not recurse, matching the
@@ -500,6 +520,7 @@ test('detailed messages translate nested errors without changing source names',f
     eq(display('请将“我的源”直接加入“游戏”场景'),'Add "我的源" directly to scene "游戏"')
     eq(display('扫描失败：incomplete process snapshot: 5'),'Scan failed: Incomplete process scan: 5')
     eq(display('自动回放已关闭（手动控制）'),'Manual control')
-    eq(find(props,'source_name').items[1].value,'Capture')
+    eq(find(props,'source_name').items[1].value,'')
+    eq(find(props,'source_name').items[2].value,'Capture')
 end)
 print('RESULT UI language, folding, status and compatibility checks passed')

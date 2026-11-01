@@ -1,0 +1,24 @@
+{
+  "schema": "ogf-game-library/1",
+  "format": "tab-separated kind/executable/name; D=path-aware game, S=fallback, I=excluded",
+  "discord_records": 11129,
+  "srm_mappings": 1894,
+  "exclusions": 348,
+  "unique_game_names": 11054,
+  "sources": [
+    {
+      "name": "Discord detectable applications local cache",
+      "sha256": "4bf6e12031e290406bd4d4eeab18b3ee9a4ad5263d8574136b6151c76b3aca0b",
+      "redistribution": "not established",
+      "url": "https://discord.com/api/v9/applications/detectable",
+      "license": "Discord terms; not relicensed by OBS GameFlow"
+    },
+    {
+      "name": "Smart Replay Mover v2.20.0",
+      "url": "https://github.com/SlonickLab/Smart-Replay-Mover",
+      "copyright": "2025-2026 SlonickLab",
+      "license": "GPL-3.0-or-later",
+      "sha256": "d9671216be2b13e019508b83a4aedd3c789c287a6b7afaa1f3e056d7e13c4a8c"
+    }
+  ]
+}

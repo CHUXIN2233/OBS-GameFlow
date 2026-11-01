@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--lua-dll', type=Path, required=True, help='OBS bin/64bit/lua51.dll')
 parser.add_argument('--database-dir', type=Path, help='Existing OGF folder with discord_games.json')
 parser.add_argument('--srm-file', type=Path, help='Existing Smart_Replay_Mover.lua')
+parser.add_argument('--reference-script', type=Path, help='Accepted script for complete built-in database equivalence checks')
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 os.environ['OGF_SCRIPT_FILE'] = str(root / 'OBS_Game_Follow.lua')
@@ -15,6 +16,8 @@ if args.database_dir:
     os.environ['OGF_DATABASE_DIR'] = str(args.database_dir.resolve())
 if args.srm_file:
     os.environ['OGF_SRM_FILE'] = str(args.srm_file.resolve())
+if args.reference_script:
+    os.environ['OGF_REFERENCE_SCRIPT_FILE'] = str(args.reference_script.resolve())
 cookie = os.add_dll_directory(str(args.lua_dll.resolve().parent))
 lua = ctypes.CDLL(str(args.lua_dll.resolve()))
 lua.luaL_newstate.restype = ctypes.c_void_p
@@ -31,6 +34,8 @@ if args.database_dir and args.srm_file:
 specs = ['lifecycle_spec.lua']
 if args.database_dir and args.srm_file:
     specs.append('database_spec.lua')
+    if args.reference_script:
+        specs.append('builtin_equivalence_spec.lua')
 for spec in specs:
     state = lua.luaL_newstate()
     lua.luaL_openlibs(state)

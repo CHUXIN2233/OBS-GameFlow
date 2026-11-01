@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+- Embed a unified game library in the Lua script; no database download or SRM path is required.
+- Preserve path matching, ambiguity handling, exclusions, custom-rule priority, existing configured imports and missing-file fallback.
+- Select the sole existing Game Capture source on first use; retain explicit choices and legacy default-source settings.
+- Retain capture, League, desktop and replay behavior, including the v1.0.1 startup logging fix.
+- Update English/Chinese installation guidance, add a direct single-file download and retain source attribution.
+- Adopt GPL-3.0-or-later for this bundled edition and SRM-derived portions; retain the original MIT notice and third-party data terms. Earlier releases remain unchanged.
+
 ## 1.0.1
 
 - Keep expected game/client startup waits in ordinary logs so OBS does not open Script Log while waiting for a capture window.

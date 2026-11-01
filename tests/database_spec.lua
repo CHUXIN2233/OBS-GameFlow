@@ -21,7 +21,8 @@ void obs_data_set_default_bool(void* data, const char* name, bool value);
 const char* obs_data_get_json(void* data);
 ]]
 local lib=ffi.load(os.getenv("OGF_OBS_DLL"))
-obslua={LOG_INFO=200,LOG_WARNING=300,timer_remove=function() end,
+obslua={LOG_INFO=300,LOG_WARNING=200,timer_remove=function() end,
+    obs_enum_sources=function() return {} end,source_list_release=function() end,
     script_log=function(_,msg) print(msg) end}
 for _,name in ipairs({"obs_data_create_from_json","obs_data_release","obs_data_get_array",
     "obs_data_array_item","obs_data_array_release","obs_data_get_bool",
@@ -32,6 +33,15 @@ end
 obslua.obs_data_array_count=function(a) return tonumber(lib.obs_data_array_count(a)) end
 obslua.obs_data_get_int=function(a,k) return tonumber(lib.obs_data_get_int(a,k)) end
 obslua.obs_data_get_string=function(a,k) return ffi.string(lib.obs_data_get_string(a,k)) end
+-- Match OBS's Lua binding: C NULL pointers become nil, not truthy FFI values.
+for _,name in ipairs({'obs_data_create_from_json','obs_data_get_array','obs_data_array_item'}) do
+    local native=lib[name]
+    obslua[name]=function(...)
+        local value=native(...)
+        if value==nil then return nil end
+        return value
+    end
+end
 script_path=function() return os.getenv("OGF_DATABASE_DIR") end
 dofile(os.getenv("OGF_SCRIPT_FILE"))
 local settings=lib.obs_data_create()

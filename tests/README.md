@@ -1,21 +1,21 @@
-# Local verification
+# Verification
 
-The lifecycle suite simulates the OBS frontend and uses the real Windows LuaJIT / Win32 FFI. UI checks cover language selection, labels, help, folding and replay status. Database checks use real libobs JSON parsing with files supplied by the tester.
+The LuaJIT suite simulates the OBS frontend and uses real Windows Win32 FFI. The library equivalence suite uses real libobs JSON parsing to compare the built-in records against the accepted external-library version.
 
-From the repository root, with Python 3 installed for testing only:
+Python is needed only for development tests, not to run OBS GameFlow.
 
 ```powershell
 python tests/run_tests.py --lua-dll "C:/Program Files/obs-studio/bin/64bit/lua51.dll"
 ```
 
-Optional database checks:
+Optional external-data and full-reference checks:
 
 ```powershell
-python tests/run_tests.py --lua-dll "C:/Program Files/obs-studio/bin/64bit/lua51.dll" --database-dir "C:/path/to/your/database-folder" --srm-file "C:/path/to/Smart_Replay_Mover.lua"
+python tests/run_tests.py --lua-dll "C:/Program Files/obs-studio/bin/64bit/lua51.dll" --database-dir "C:/path/to/existing/database-folder" --srm-file "C:/path/to/Smart_Replay_Mover.lua" --reference-script "C:/path/to/OGF-v1.0.1/OBS_Game_Follow.lua"
 ```
 
-The database directory must contain `discord_games.json`. No database is distributed here. Tests do not launch OBS or change its configuration. They do not replace live-game acceptance.
+The database folder must contain discord_games.json. These inputs are supplied by the tester. Tests do not launch production OBS or modify its configuration.
 
-Release validation completed on Windows with OBS 33.0.1: 34 lifecycle checks, 6 UI checks and 6 recognition cases passed. Native OBS property callbacks, bilingual text and UI preference persistence were also checked in an isolated OBS instance. User acceptance covered Tarkov, Slay the Spire 2 and League of Legends, Alt+Tab, game fallback, desktop capture, OBS restart and SRM saving. The final Chinese UI was observed in the production instance; a separate visual inspection of its English UI was not performed.
+Validation for v1.1.0: 37 lifecycle/source-selection checks, 6 UI checks, 6 external-data cases and 24,503 recognition comparisons passed. Complete path/name mappings, exclusions, missing/invalid optional import fallback, legacy configured imports and manual-rule precedence were compared.
 
-Version 1.0.1 adds regressions for delayed game/client window enumeration, read-only inspection and genuine configuration warnings. The startup issue was reproduced in the old suite; the fixed script was loaded into production OBS with the existing Tarkov target and replay buffer retained. The user has also confirmed that a fresh live-game launch passes acceptance after the fix.
+An isolated OBS 33.0.1 checked bilingual native properties, settings persistence, sole-source selection, no guessing with multiple sources and legacy default-source migration. The built-in version was loaded in the installed OBS: the existing Tarkov target and scene visibility were retained, the buffer stayed active without restarting, and no Lua loading errors were seen. These checks do not claim new live-game coverage beyond the previously accepted workflows.

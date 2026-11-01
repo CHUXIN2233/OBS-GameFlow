@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Keep expected game/client startup waits in ordinary logs so OBS does not open Script Log while waiting for a capture window.
+- Keep warnings for configuration errors; capture retries and replay behavior are unchanged.
+- Add four logging regressions and use the actual OBS log-level values in the test frontend.
+
 ## 1.0.0
 
 First public release of OBS GameFlow.

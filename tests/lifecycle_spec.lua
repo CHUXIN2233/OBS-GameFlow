@@ -26,9 +26,13 @@ local foreground, processes, scan_error = nil, {}, nil
 local timer, settings
 local sources, scene, group, desktop_item, game_item, client_item, other_item
 local logs = {}
+local log_entries = {}
 obslua = {
-    LOG_INFO = 200, LOG_WARNING = 300,
-    script_log = function(_, message) logs[#logs+1] = message end,
+    LOG_INFO = 300, LOG_WARNING = 200,
+    script_log = function(level, message)
+        logs[#logs+1] = message
+        log_entries[#log_entries+1] = {level=level, message=message}
+    end,
     os_gettime_ns = function() return now * 1e9 end,
     obs_data_get_string = function(s,k) return s[k] or "" end,
     obs_data_get_bool = function(s,k) return s[k] == true end,
@@ -354,6 +358,54 @@ test("saved automatic replay setting survives defaults and settings reload",func
     settings.enabled=false; script_update(settings); active=false
     script_defaults(settings); enable(); eq(starts,2)
 end)
+local function no_log_popup_since(index)
+    for i=index+1,#log_entries do
+        assert(log_entries[i].level > obslua.LOG_WARNING,
+            'OBS would show Script Log: '..log_entries[i].message)
+    end
+end
+
+test('game startup waits for OBS window enumeration without opening Script Log',function()
+    reset(); processes={[101]=A}; foreground=A; sources.Capture.windows={}
+    local previous=#log_entries
+    enable(); tick(10)
+    assert(#log_entries>previous,'startup should remain visible in ordinary logs')
+    no_log_popup_since(previous)
+    eq(desktop_item.visible,false); eq(active,true); eq(starts,1); eq(stops,0)
+    sources.Capture.windows={'a.exe:GameWindow:a.exe'}
+    tick(); eq(target(),'a.exe:GameWindow:a.exe')
+    no_log_popup_since(previous); eq(starts,1); eq(stops,0)
+end)
+
+test('client startup waits for OBS window enumeration without opening Script Log',function()
+    reset(); processes={[303]=client}; foreground=client; sources.Client.windows={}
+    local previous=#log_entries
+    enable(); tick(10); no_log_popup_since(previous)
+    eq(active,true); eq(starts,1); eq(stops,0)
+    sources.Client.windows={'LeagueClientUx.exe:GameWindow:LeagueClientUx.exe'}
+    tick(); eq(sources.Client.settings.window,'LeagueClientUx.exe:GameWindow:LeagueClientUx.exe')
+    no_log_popup_since(previous); eq(starts,1); eq(stops,0)
+end)
+
+test('read-only inspection logs pending capture normally and changes no output',function()
+    reset(); foreground=A; sources.Capture.windows={}
+    local inspect=up(up(up(script_properties,'on_inspect_clicked'),'inspect_after_delay'),'inspect_or_switch')
+    local previous=#log_entries
+    inspect(true,false); no_log_popup_since(previous)
+    eq(target(),nil); eq(starts,0); eq(stops,0)
+end)
+
+test('real capture configuration errors still produce warnings',function()
+    reset(); processes={[101]=A}; foreground=A; sources.Capture.kind='window_capture'
+    local previous=#log_entries
+    enable()
+    local warned=false
+    for i=previous+1,#log_entries do
+        if log_entries[i].level==obslua.LOG_WARNING then warned=true end
+    end
+    assert(warned,'configuration failure must remain a warning')
+end)
+
 print(string.format("RESULT %d tests passed; frontend simulation + real Windows LuaJIT/FFI",total))
 
 -- UI-only model: nested lookup deliberately does not recurse, matching the

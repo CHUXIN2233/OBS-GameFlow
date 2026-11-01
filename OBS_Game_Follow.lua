@@ -1,4 +1,4 @@
--- OBS GameFlow v1.0.0
+-- OBS GameFlow v1.0.1
 -- Pure OBS LuaJIT script: Windows foreground -> Discord/SRM games -> one Game Capture.
 -- Optional EXE allowlist -> one reusable Window Capture, without restarting Replay Buffer.
 -- No Python process, no WebSocket, no native DLL to install.
@@ -179,6 +179,15 @@ local function log(level, message)
     else
         print("[OBS GameFlow] " .. display_text(message))
     end
+end
+
+local function capture_log_level(ok, reason)
+    -- A new game/client can precede its entry in OBS's window selector.
+    -- Keep retrying normally; LOG_WARNING would open OBS's Script Log.
+    if ok or reason == "not present in OBS capture window list" then
+        return obs.LOG_INFO
+    end
+    return obs.LOG_WARNING
 end
 
 local function folder_of_script()
@@ -721,7 +730,7 @@ local function inspect_or_switch(force_log, apply)
                 status_capture = status_lol
             end
             if force_log or fingerprint ~= last_status then
-                log(target_ok and obs.LOG_INFO or obs.LOG_WARNING, status_capture)
+                log(capture_log_level(target_ok, target_result), status_capture)
             end
         else
             status_capture = "只读检查：识别到名单中的客户端 " .. exe
@@ -758,7 +767,7 @@ local function inspect_or_switch(force_log, apply)
         status_capture = "已保持：" .. exe
     end
     if force_log or fingerprint ~= last_status or (ok and apply and result:find("[switched]", 1, true)) then
-        log(ok and obs.LOG_INFO or obs.LOG_WARNING,
+        log(capture_log_level(ok, result),
             "Detected [" .. reason .. "] " .. game .. ": " .. result)
     end
     last_status = fingerprint
@@ -1008,7 +1017,7 @@ local function on_timer()
         if key ~= current_paths then
             current_paths = key
             status_switched = os.date("%H:%M:%S") .. " " .. target.name
-            log(ok and obs.LOG_INFO or obs.LOG_WARNING, status_capture)
+            log(capture_log_level(ok, result), status_capture)
         end
         manage_replay(true, now)
     else

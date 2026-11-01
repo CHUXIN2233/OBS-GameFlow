@@ -739,6 +739,7 @@ if ffi_ok then
             int Process32FirstW(void* snapshot, OGF_PROCESSENTRY32W* entry);
             int Process32NextW(void* snapshot, OGF_PROCESSENTRY32W* entry);
             unsigned long GetLastError(void);
+            unsigned long GetCurrentProcessId(void);
             void* GetTopWindow(void* hwnd);
             void* GetWindow(void* hwnd, unsigned int command);
             int IsWindowVisible(void* hwnd);
@@ -966,8 +967,12 @@ local function foreground_window()
 
     local title = ffi.new("uint16_t[?]", 4096)
     local class = ffi.new("uint16_t[?]", 512)
-    user32.GetWindowTextW(hwnd, title, 4096)
-    user32.GetClassNameW(hwnd, class, 512)
+    -- Same-process GetWindowTextW synchronously messages OBS's UI thread.
+    -- A UI callback may already be waiting for this Lua timer's script lock.
+    if tonumber(pid[0]) ~= tonumber(kernel32.GetCurrentProcessId()) then
+        user32.GetWindowTextW(hwnd, title, 4096)
+        user32.GetClassNameW(hwnd, class, 512)
+    end
     return {
         path = utf8_wide(image),
         title = utf8_wide(title),
@@ -999,6 +1004,7 @@ local srm = {}
 local ignored = {}
 local overrides = {}
 local source_name = ""
+local source_selection_legacy = false
 local discord_file = ""
 local srm_file = ""
 local override_text = ""
@@ -14646,12 +14652,14 @@ local function load_window_client_rules()
 end
 
 local function resolve_game_source(name, settings)
+    if settings and obs.obs_data_has_user_value then
+        source_selection_legacy = obs.obs_data_has_user_value(settings, "enabled")
+            and not obs.obs_data_has_user_value(settings, "source_name")
+    end
     -- Existing choices, including an explicit invalid choice, are never replaced.
     if name ~= "" then return name end
     -- Older OBS saves may omit a source name that equalled the old default.
-    if obs.obs_data_has_user_value
-        and obs.obs_data_has_user_value(settings, "enabled")
-        and not obs.obs_data_has_user_value(settings, "source_name") then
+    if source_selection_legacy then
         local legacy = obs.obs_get_source_by_name("游戏采集")
         if legacy then
             local valid = obs.obs_source_get_id(legacy) == "game_capture"
@@ -14925,6 +14933,7 @@ end
 -- Keep the existing recognizer and capture selectors above unchanged.
 local function native_process_windows()
     if not kernel32 or not user32 then return nil, win32_error end
+    local own_pid = tonumber(kernel32.GetCurrentProcessId())
     local snapshot = kernel32.CreateToolhelp32Snapshot(2, 0)
     if snapshot == ffi.cast("void*", -1) or snapshot == nil then
         return nil, "process snapshot unavailable"
@@ -14966,7 +14975,7 @@ local function native_process_windows()
         local pid = ffi.new("unsigned long[1]")
         user32.GetWindowThreadProcessId(hwnd, pid)
         local w = entries[tonumber(pid[0])]
-        if w and w.title == "" and user32.IsWindowVisible(hwnd) ~= 0 then
+        if w and tonumber(pid[0]) ~= own_pid and w.title == "" and user32.IsWindowVisible(hwnd) ~= 0 then
             local title, class = ffi.new("uint16_t[4096]"), ffi.new("uint16_t[512]")
             user32.GetWindowTextW(hwnd, title, 4096)
             user32.GetClassNameW(hwnd, class, 512)
@@ -15130,6 +15139,8 @@ local function on_timer()
     local scene = obs.obs_frontend_get_current_scene()
     if not scene then return end
     obs.obs_source_release(scene)
+    -- script_update may run before OBS has restored any scene sources.
+    if source_name == "" then source_name = resolve_game_source("") end
     if not loaded then load_databases() end
     local foreground = foreground_window()
     local target, err, scanned = refresh_running(foreground)

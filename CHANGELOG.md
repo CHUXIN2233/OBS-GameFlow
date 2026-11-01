@@ -6,6 +6,8 @@
 - Preserve path matching, ambiguity handling, exclusions, custom-rule priority, existing configured imports and missing-file fallback.
 - Select the sole existing Game Capture source on first use; retain explicit choices and legacy default-source settings.
 - Retain capture, League, desktop and replay behavior, including the v1.0.1 startup logging fix.
+- Avoid synchronous reads of OBS-owned window titles, which could deadlock the script timer and settings/reload callbacks.
+- Retry automatic source selection after OBS restores scene sources during startup.
 - Update English/Chinese installation guidance, add a direct single-file download and retain source attribution.
 - Adopt GPL-3.0-or-later for this bundled edition and SRM-derived portions; retain the original MIT notice and third-party data terms. Earlier releases remain unchanged.
 

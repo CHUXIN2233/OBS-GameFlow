@@ -99,6 +99,33 @@ test("native Win32 process snapshot and foreground FFI", function()
     assert((w and w.pid and w.path ~= "") or type(why)=="string")
 end)
 
+test("native foreground and background scans never synchronously read their own windows",function()
+    local ffi=require('ffi')
+    local pid=tonumber(ffi.C.GetCurrentProcessId())
+    local original=up(native_foreground,'user32')
+    local own=ffi.cast('void*',1200)
+    local calls=0
+    local proxy=setmetatable({
+        GetForegroundWindow=function() return own end,
+        GetWindowThreadProcessId=function(_,value) value[0]=pid;return 1 end,
+        GetTopWindow=function() return own end,
+        GetWindow=function() return nil end,
+        IsWindowVisible=function() return 1 end,
+        GetWindowTextW=function() calls=calls+1;error('same-process WM_GETTEXT can deadlock the UI') end,
+        GetClassNameW=function() calls=calls+1;error('own window should be skipped') end,
+    },{__index=function(_,name)return original[name] end})
+    up(native_foreground,'user32',proxy)
+    local ok,why=pcall(function()
+        local current=assert(native_foreground())
+        eq(current.pid,pid);eq(current.title,'');eq(current.class,'')
+        local snapshot=assert(native_scan())
+        eq(snapshot[pid].title,'');eq(snapshot[pid].class,'')
+        eq(calls,0)
+    end)
+    up(native_foreground,'user32',original)
+    assert(ok,why)
+end)
+
 up(refresh, "native_process_windows", function()
     if scan_error then return nil, scan_error end
     local copy={}
@@ -424,6 +451,17 @@ test('existing explicit Game Capture selection is retained with multiple sources
     sources.Second={name='Second',kind='game_capture',settings={},windows={}}
     script_update(settings)
     eq(settings.source_name,'Capture'); eq(starts,0); eq(stops,0)
+end)
+
+test('automatic source selection recovers when OBS restores sources after script_update',function()
+    local original=obslua.obs_enum_sources
+    obslua.obs_enum_sources=function() return {} end
+    reset({source_name=''});ready=false;enable()
+    eq(up(lifecycle,'source_name'),'');eq(starts,0)
+    obslua.obs_enum_sources=original
+    ready=true;processes={[101]=A};foreground=A;tick()
+    eq(up(lifecycle,'source_name'),'Capture')
+    eq(target(),'a.exe:GameWindow:a.exe');eq(starts,1);eq(stops,0)
 end)
 
 print(string.format("RESULT %d tests passed; frontend simulation + real Windows LuaJIT/FFI",total))
